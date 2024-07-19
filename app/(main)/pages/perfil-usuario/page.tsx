@@ -12,6 +12,10 @@ import { classNames } from 'primereact/utils';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Projeto } from '@/types';
 import { PerfilUsuarioService } from '@/service/PerfilUsuarioService';
+import { userAgent } from 'next/server';
+import { UsuarioService } from '@/service/UsuarioService';
+import { PerfilService } from '@/service/PerfilService';
+import { Dropdown, DropdownChangeEvent } from 'primereact/dropdown';
 
 
 const PerfilUsuario = () => {
@@ -32,6 +36,10 @@ const PerfilUsuario = () => {
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
     const perfilUsuarioService = useMemo(() => new PerfilUsuarioService(), []);
+    const usuarioService = useMemo(() => new UsuarioService(), []);
+    const perfilService = useMemo(() => new PerfilService(), []);
+    const [usuarios, setUsuarios] = useState<Projeto.Usuario[]>([]);
+    const [perfis, setPerfis] = useState<Projeto.Perfil[]>([]);
 
     useEffect(() => {
         if (!perfisUsuario) {
@@ -44,6 +52,32 @@ const PerfilUsuario = () => {
                 })
         }
     }, [perfilUsuarioService, perfisUsuario]);
+
+    useEffect(() => {
+        if(perfilUsuarioDialog){
+            usuarioService.listarTodos()
+            .then((response) => setUsuarios(response.data))
+            .catch(error => {
+                console.log(error);
+                toast.current?.show({
+                    severity: 'info',
+                    summary: 'Erro!',
+                    detail: 'Erro ao carregar a lista de usuario!'
+                })
+            });
+            perfilService.listarTodos()
+            .then((response) =>setPerfis(response.data))
+            .catch((error => {
+                console.log(error);
+                toast.current?.show({
+                    severity: 'info',
+                    summary: 'Erro!',
+                    detail: 'Erro ao carregar a lista de perfil!'
+                })
+            }))
+
+        }
+    },[perfilUsuarioDialog, perfilService, usuarioService]);
 
 
     const openNew = () => {
@@ -149,23 +183,23 @@ const PerfilUsuario = () => {
     };
 
     const confirmDeleteSelected = () => {
-        setDeletePerfilsDialog(true);
+        setDeletePerfilsUsuarioDialog(true);
     };
 
-    const deleteSelectedPerfils = () => {
+    const deleteSelectedPerfilsUsuario = () => {
 
-        Promise.all(selectedPerfils.map(async (_perfil) => {
-            if (_perfil.id) {
-                await perfilService.excluir(_perfil.id);
+        Promise.all(selectedPerfilsUsuario.map(async (_perfilUsuario) => {
+            if (_perfilUsuario.id) {
+                await perfilUsuarioService.excluir(_perfilUsuario.id);
             }
         })).then((response) => {
-            setPerfils(null);
-            setSelectedPerfils(([]));
-            setDeletePerfilsDialog(false);
+            setPerfilsUsuario(null);
+            setSelectedPerfilsUsuario(([]));
+            setDeletePerfilsUsuarioDialog(false);
             toast.current?.show({
                 severity: 'success',
                 summary: 'Sucesso!',
-                detail: 'Perfils Deletados com Sucesso',
+                detail: 'Perfils Usuario Deletados com Sucesso',
                 life: 3000
             });
         }).catch((error) =>{
@@ -187,8 +221,8 @@ const PerfilUsuario = () => {
         // setRecurso(_recurso);
 
         // JEITO CERTO
-        setPerfil(prevPerfil => ({
-             ...prevPerfil,
+        setPerfilUsuario(prevPerfilUsuario => ({
+             ...prevPerfilUsuario,
               [name]: val,
         }));
     };
@@ -198,7 +232,7 @@ const PerfilUsuario = () => {
             <React.Fragment>
                 <div className="my-2">
                     <Button label="Novo" icon="pi pi-plus" severity="success" className=" mr-2" onClick={openNew} />
-                    <Button label="Excluir" icon="pi pi-trash" severity="danger" onClick={confirmDeleteSelected} disabled={!selectedPerfils || !(selectedPerfils as any).length} />
+                    <Button label="Excluir" icon="pi pi-trash" severity="danger" onClick={confirmDeleteSelected} disabled={!selectedPerfilsUsuario || !(selectedPerfilsUsuario as any).length} />
                 </div>
             </React.Fragment>
         );
@@ -222,27 +256,36 @@ const PerfilUsuario = () => {
         );
     };
 
-    const descricaoBodyTemplate = (rowData: Projeto.Perfil) => {
+    const perfilBodyTemplate = (rowData: Projeto.PerfilUsuario) => {
         return (
             <>
-                <span className="p-column-title">Descricao</span>
-                {rowData.descricao}
+                <span className="p-column-title">Perfil</span>
+                {rowData.perfil.descricao}
             </>
         );
     };
 
-    const actionBodyTemplate = (rowData: Projeto.Perfil) => {
+    const usuarioBodyTemplate = (rowData: Projeto.PerfilUsuario) => {
         return (
             <>
-                <Button icon="pi pi-pencil" rounded severity="success" className="mr-2" onClick={() => editPerfil(rowData)} />
-                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeletePerfil(rowData)} />
+                <span className="p-column-title">Usuário</span>
+                {rowData.usuario.nome}
+            </>
+        );
+    };
+
+    const actionBodyTemplate = (rowData: Projeto.PerfilUsuario) => {
+        return (
+            <>
+                <Button icon="pi pi-pencil" rounded severity="success" className="mr-2" onClick={() => editPerfilUsuario(rowData)} />
+                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeletePerfilUsuario(rowData)} />
             </>
         );
     };
 
     const header = (
         <div className="flex flex-column md:flex-row md:justify-content-between md:align-items-center">
-            <h5 className="m-0">Gerenciamento de Perfils</h5>
+            <h5 className="m-0">Gerenciamento de Perfils Usuários</h5>
             <span className="block mt-2 md:mt-0 p-input-icon-left">
                 <i className="pi pi-search" />
                 <InputText type="search" onInput={(e) => setGlobalFilter(e.currentTarget.value)} placeholder="Search..." />
@@ -253,21 +296,33 @@ const PerfilUsuario = () => {
     const perfilDialogFooter = (
         <>
             <Button label="Cancelar" icon="pi pi-times" text onClick={hideDialog} />
-            <Button label="Salvar" icon="pi pi-check" text onClick={savePerfil} />
+            <Button label="Salvar" icon="pi pi-check" text onClick={savePerfilUsuario} />
         </>
     );
     const deletePerfilDialogFooter = (
         <>
             <Button label="Não" icon="pi pi-times" text onClick={hideDeletePerfilDialog} />
-            <Button label="Sim" icon="pi pi-check" text onClick={deletePerfil} />
+            <Button label="Sim" icon="pi pi-check" text onClick={deletePerfilUsuario} />
         </>
     );
     const deletePerfilsDialogFooter = (
         <>
             <Button label="Não" icon="pi pi-times" text onClick={hideDeletePerfilsDialog} />
-            <Button label="Sim" icon="pi pi-check" text onClick={deleteSelectedPerfils} />
+            <Button label="Sim" icon="pi pi-check" text onClick={deleteSelectedPerfilsUsuario} />
         </>
     );
+
+    const onSelectPerfilChange = (perfil: Projeto.Perfil) => {
+        let _perfilUsuario = {...perfilUsuario};
+        _perfilUsuario.perfil = perfil;
+        setPerfilUsuario(_perfilUsuario);
+    }
+
+    const onSelectUsuarioChange = (usuario: Projeto.Usuario) => {
+        let _perfilUsuario = {...perfilUsuario};
+        _perfilUsuario.usuario = usuario;
+        setPerfilUsuario(_perfilUsuario);
+    }
 
     return (
         <div className="grid crud-demo">
@@ -278,60 +333,58 @@ const PerfilUsuario = () => {
 
                     <DataTable
                         ref={dt}
-                        value={perfis}
-                        selection={selectedPerfils}
-                        onSelectionChange={(e) => setSelectedPerfils(e.value as any)}
+                        value={perfisUsuario}
+                        selection={selectedPerfilsUsuario}
+                        onSelectionChange={(e) => setSelectedPerfilsUsuario(e.value as any)}
                         dataKey="id"
                         paginator
                         rows={10}
                         rowsPerPageOptions={[5, 10, 25]}
                         className="datatable-responsive"
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                        currentPageReportTemplate="Mostrando {first} até {last} de {totalRecords} perfil"
+                        currentPageReportTemplate="Mostrando {first} até {last} de {totalRecords} perfis"
                         globalFilter={globalFilter}
-                        emptyMessage="Nenhum perfil encontrado."
+                        emptyMessage="Nenhum perfil usuário encontrado."
                         header={header}
                         responsiveLayout="scroll"
                     >
                         <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
                         <Column field="id" header="Código" sortable body={idBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
-                        <Column field="descricao" header="Descricao" sortable body={descricaoBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
+                        <Column field="perfil" header="Perfil" sortable body={perfilBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
+                        <Column field="usuario" header="Usuario" sortable body={usuarioBodyTemplate} headerStyle={{ minWidth: '15rem' }}></Column>
                         <Column body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
 
-                    <Dialog visible={perfilDialog} style={{ width: '450px' }} header="Detalhes de Perfil" modal className="p-fluid" footer={perfilDialogFooter} onHide={hideDialog}>
+                    <Dialog visible={perfilUsuarioDialog} style={{ width: '450px' }} header="Detalhes de Perfil Usuário" modal className="p-fluid" footer={perfilDialogFooter} onHide={hideDialog}>
+                    
+                    <div className="field">
+                            <label htmlFor="perfil">Perfil</label>
+                            <Dropdown optionLabel="descricao" value={perfilUsuario.perfil} options={perfis} filter onChange={(e: DropdownChangeEvent) => onSelectPerfilChange(e.value)} placeholder='Selecione um perfil...'/>
+                            {submitted && !perfilUsuario.perfil && <small className="p-invalid">Perfil é obrigatório.</small>}
+                        </div>
 
                         <div className="field">
-                            <label htmlFor="descricao">Descricao</label>
-                            <InputText
-                                id="descricao"
-                                value={perfil.descricao}
-                                onChange={(e) => onInputChange(e, 'descricao')}
-                                required
-                                autoFocus
-                                className={classNames({
-                                    'p-invalid': submitted && !perfil.descricao
-                                })}
-                            />
-                            {submitted && !perfil.descricao && <small className="p-invalid">Perfil é obrigatório.</small>}
+                            <label htmlFor="usuario">Usuário</label>
+                            <Dropdown optionLabel="nome" value={perfilUsuario.usuario} options={usuarios} filter onChange={(e: DropdownChangeEvent) => onSelectUsuarioChange(e.value)} placeholder='Selecione um usuario...'/>
+                            {submitted && !perfilUsuario.usuario && <small className="p-invalid">Perfil é obrigatório.</small>}
                         </div>
                     </Dialog>
 
-                    <Dialog visible={deletePerfilDialog} style={{ width: '450px' }} header="Confirmar" modal footer={deletePerfilDialogFooter} onHide={hideDeletePerfilDialog}>
+                    <Dialog visible={deletePerfilUsuarioDialog} style={{ width: '450px' }} header="Confirmar" modal footer={deletePerfilDialogFooter} onHide={hideDeletePerfilDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {perfil && (
+                            {perfilUsuario && (
                                 <span>
-                                    Você realmente deseja excluir o perfil <b>{perfil.descricao}</b>?
+                                    Você realmente deseja excluir o perfil <b>{perfilUsuario.id}</b>?
                                 </span>
                             )}
                         </div>
                     </Dialog>
 
-                    <Dialog visible={deletePerfilsDialog} style={{ width: '450px' }} header="Confirmar" modal footer={deletePerfilsDialogFooter} onHide={hideDeletePerfilsDialog}>
+                    <Dialog visible={deletePerfilsUsuarioDialog} style={{ width: '450px' }} header="Confirmar" modal footer={deletePerfilsDialogFooter} onHide={hideDeletePerfilsDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {perfil && <span>Você realmente deseja excluir os perfils selecionados?</span>}
+                            {perfilUsuario && <span>Você realmente deseja excluir os perfis  selecionados?</span>}
                         </div>
                     </Dialog>
                 </div>
@@ -340,4 +393,4 @@ const PerfilUsuario = () => {
     );
 };
 
-export default Perfil;
+export default PerfilUsuario;
