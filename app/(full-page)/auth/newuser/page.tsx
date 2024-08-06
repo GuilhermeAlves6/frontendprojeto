@@ -1,24 +1,72 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 import { useRouter } from 'next/navigation';
-import React, { useContext, useState } from 'react';
+import React, { useContext, useMemo, useRef, useState } from 'react';
 import { Checkbox } from 'primereact/checkbox';
 import { Button } from 'primereact/button';
 import { Password } from 'primereact/password';
 import { LayoutContext } from '../../../../layout/context/layoutcontext';
 import { InputText } from 'primereact/inputtext';
 import { classNames } from 'primereact/utils';
+import { LoginService } from '@/service/LoginService';
+import { Toast } from 'primereact/toast';
 
 const NewUserPage = () => {
-    const [password, setPassword] = useState('');
-    const [checked, setChecked] = useState(false);
+
+        let usuarioVazio: Projeto.Usuario = {
+            id: 0,
+            nome: '',
+            login: '',
+            senha: '',
+            email: ''
+        };
+        const [usuario, setusuario] = useState<Projeto.Usuario>(usuarioVazio);
+        const loginService = useMemo(() => new LoginService(), []);
+        const toast = useRef<Toast>(null);
+
+    
+    
     const { layoutConfig } = useContext(LayoutContext);
 
     const router = useRouter();
     const containerClassName = classNames('surface-ground flex align-items-center justify-content-center min-h-screen min-w-screen overflow-hidden', { 'p-input-filled': layoutConfig.inputStyle === 'filled' });
 
+    const onInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, name: string) => {
+        const val = (e.target && e.target.value) || '';
+        // let _usuario = { ...usuario };
+        // _usuario[`${name}`] = val;
+
+        // setUsuario(_usuario);
+        setusuario(prevUsuario => ({
+             ...prevUsuario,
+             [name]: val,
+        }));
+    };
+
+    const novoUsuario = () => {
+        
+        loginService.novoCadastro(usuario).then((response) =>{
+            setusuario(usuarioVazio);
+                    toast.current?.show({
+                        severity: 'info',
+                        summary: 'Success!',
+                        detail: 'Usuário cadastrado com sucesso!'
+                    });
+        }).catch((error) => {
+            console.log(error.data.message);
+            toast.current?.show({
+                severity: 'error',
+                summary: 'Error!',
+                detail: 'Erro ao salvar!' + error.data.message
+            })
+        });
+    }
+
+
+
     return (
-        <div className={containerClassName}>
+        
+        <div className={containerClassName}><Toast ref={toast} />
             <div className="flex flex-column align-items-center justify-content-center">
                 <img src={`/layout/images/logo-${layoutConfig.colorScheme === 'light' ? 'dark' : 'white'}.svg`} alt="Sakai logo" className="mb-5 w-6rem flex-shrink-0" />
                 <div
@@ -37,29 +85,37 @@ const NewUserPage = () => {
                             <label htmlFor="nome" className="block text-900 text-xl font-medium mb-2">
                                 Nome
                             </label>
-                            <InputText id="nome" type="text" placeholder="Dígite seu nome" className="w-full md:w-30rem mb-5" style={{ padding: '1rem' }} />
+                            <InputText id="nome" type="text" placeholder="Dígite seu nome" className="w-full md:w-30rem mb-5" style={{ padding: '1rem' }}
+                              value={usuario.nome}
+                                onChange={(e) => onInputChange(e, 'nome')}/>
 
                             <label htmlFor="login" className="block text-900 text-xl font-medium mb-2">
                                 Login
                             </label>
-                            <InputText id="login" type="text" placeholder="Dígite seu login" className="w-full md:w-30rem mb-5" style={{ padding: '1rem' }} />
+                            <InputText id="login" type="text" placeholder="Dígite seu login" className="w-full md:w-30rem mb-5" style={{ padding: '1rem' }}
+                            value={usuario.login}
+                                onChange={(e) => onInputChange(e, 'login')} />
 
                             <label htmlFor="senha" className="block text-900 font-medium text-xl mb-2">
                                 Senha
                             </label>
-                            <Password inputId="senha" value={password} placeholder="Dígite sua Senha" toggleMask className="w-full mb-5" inputClassName="w-full p-3 md:w-30rem"></Password>
+                            <Password inputId="senha" placeholder="Dígite sua Senha" toggleMask className="w-full mb-5" inputClassName="w-full p-3 md:w-30rem" 
+                            value={usuario.senha}
+                                onChange={(e) => onInputChange(e, 'senha')}></Password>
 
                             <label htmlFor="email" className="block text-900 text-xl font-medium mb-2">
                                 Email
                             </label>
-                            <InputText id="email" type="text" placeholder="Dígite seu email" className="w-full md:w-30rem mb-5" style={{ padding: '1rem' }} />
+                            <InputText id="email" type="text" placeholder="Dígite seu email" className="w-full md:w-30rem mb-5" style={{ padding: '1rem' }} 
+                            value={usuario.email}
+                                onChange={(e) => onInputChange(e, 'email')}/>
 
                             <div className="flex align-items-center justify-content-between mb-5 gap-5">  
                                 <a className="font-medium no-underline ml-2 text-right cursor-pointer" style={{ color: 'var(--primary-color)' }} onClick={() => router.push('/auth/login')}>
                                     Já tenho cadastro!
                                 </a>
                             </div>
-                            <Button label="Efetuar Cadastro" className="w-full p-3 text-xl" onClick={() => router.push('/')}></Button>
+                            <Button label="Efetuar Cadastro" className="w-full p-3 text-xl" onClick={() => novoUsuario()}></Button>
                         </div>
                     </div>
                 </div>
