@@ -22,7 +22,7 @@ const NewUserPage = () => {
         };
         const [usuario, setusuario] = useState<Projeto.Usuario>(usuarioVazio);
         const loginService = useMemo(() => new LoginService(), []);
-        const toast = useRef<Toast>(null);
+        
 
     
     
@@ -30,6 +30,8 @@ const NewUserPage = () => {
 
     const router = useRouter();
     const containerClassName = classNames('surface-ground flex align-items-center justify-content-center min-h-screen min-w-screen overflow-hidden', { 'p-input-filled': layoutConfig.inputStyle === 'filled' });
+
+    const toast = useRef<Toast>(null);
 
     const onInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, name: string) => {
         const val = (e.target && e.target.value) || '';
@@ -52,6 +54,7 @@ const NewUserPage = () => {
                         summary: 'Success!',
                         detail: 'Usuário cadastrado com sucesso!'
                     });
+
         }).catch((error) => {
             console.log(error.data.message);
             toast.current?.show({
@@ -66,7 +69,8 @@ const NewUserPage = () => {
 
     return (
         
-        <div className={containerClassName}><Toast ref={toast} />
+        <div className={containerClassName}>
+            <Toast ref={toast} />
             <div className="flex flex-column align-items-center justify-content-center">
                 <img src={`/layout/images/logo-${layoutConfig.colorScheme === 'light' ? 'dark' : 'white'}.svg`} alt="Sakai logo" className="mb-5 w-6rem flex-shrink-0" />
                 <div
