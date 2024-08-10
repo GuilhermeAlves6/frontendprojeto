@@ -37,6 +37,7 @@ const LoginPage = () => {
             localStorage.setItem('TOKEN_APLICACAO_FRONTEND', response.data.token);
 
             router.push('/');
+            window.location.reload();
         }).catch(() => {
             
             toast.current?.show({
